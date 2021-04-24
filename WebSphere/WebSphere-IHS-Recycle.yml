@@ -1,0 +1,37 @@
+---
+############################################################################
+#              Author: Narasimha Athreya                                   #
+#              github: https://github.com/NarasimhaAthreya                 #
+############################################################################
+
+- name: Recycle WebSphere Environment
+  hosts: localhost
+  gather_facts: no
+  become: True
+  become_method: sudo
+  vars:
+    ihs_home: /usr/IBMHTTP85/IHSServers
+  vars_prompt:
+    name: conf
+    prompt: Please enter the configuration file name
+    private: no
+  tasks:
+    - name: Stop IHSServer
+      raw: '{{ ihs_home }}'/bin/apachectl -k stop -f {{ ihs_home }}/conf/{{ conf }}
+      register: output
+      changed_when: output.rc == 0
+      tags: stopIHS
+      notify: Pause after each tasks
+
+    - name: Start IHSServer
+      raw: '{{ ihs_home }}'/bin/apachectl -k start -f {{ ihs_home }}/conf/{{ conf }}
+      register: output
+      changed_when: output.rc == 0
+      tags: startIHS
+
+  handlers:
+    - name: Pause after each tasks
+      pause:
+        seconds: 3
+        
+...
