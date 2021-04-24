@@ -1,0 +1,108 @@
+---
+############################################################################
+#              Author: Narasimha Athreya                                    #
+#              github: https://github.com/NarasimhaAthreya                 #
+############################################################################
+
+- name: Recycle WebSphere Environment
+  hosts: localhost
+  gather_facts: no
+  become: True
+  become_method: sudo
+  vars:
+    was_home: /usr/WAS85/AppServer
+    port: 51801
+  vars_prompt:
+    - name: dmgr
+      prompt: Please enter DMGR server name
+      private: no
+    
+    - name: pid
+      prompt: Please enter application process ID used to start process
+      private: no
+  pre_tasks:
+    - name: Gather Profiles Path
+      raw: ls -l {was_home}/profiles | awk 'NR >1 { print $9 }'
+      register: output
+      vars:
+       profiles: output.stdout_lines
+      tags: gatherProfiles
+  
+  tasks:
+    - name: Stop DMGR
+      raw: '{was_home}'/bin/stopManager.sh 
+      ignore_errors: yes
+      run_once: True
+      delegate_to: '{{ dmgr }}'
+      register: result
+      tags: stopDMGR
+      notify: Pause after each tasks
+
+    - name: Start DMGR
+      raw: '{was_home}'/bin/startManager.sh
+      ignore_errors: yes
+      run_once: True
+      delegate_to: '{{ dmgr }}'
+      tags: startDMGR
+      notify: Pause after each tasks
+
+    - name: stop nodeagents
+      raw: '{{ was_home }}'/profiles/{{ item }}/bin/stopNode.sh
+      ignore_errors: yes
+      with_items: " {{ output.stdout_lines }}"
+      when: '"Dmgr01" not in item '
+      tags: stopNodes
+      notify: Pause after each tasks
+
+    - name: Clear wstemp
+      raw: rm -rf {{ was_home }}/profiles/{{ item }}/wstemp/*
+      ignore_errors: yes
+      with_items: " {{ output.stdout_lines }}"
+      when: '"Dmgr01" not in item '
+      tags: clearWstemp
+
+    - name: Clear Temp
+      raw: rm -rf {{ was_home }}/profiles/{{ item }}/temp/*
+      ignore_errors: yes
+      with_items: " {{ output.stdout_lines }}"
+      when: '"Dmgr01" not in item '
+      tags: clearTemp
+
+    - name: Sync Nodeagents
+      raw: '{{ was_home }}'/profiles/{{ item }}/bin/sysNode.sh {{ dmgr }} {{ port }}
+      with_items: " {{ output.stdout_lines }}"
+      when: '"Dmgr01" not in item '
+      tags: syncNodeagents
+      notify: Pause after each tasks
+
+    - name: Change permission
+      raw: chmod -R 775 {{ was_home }}
+      tags: changePermission
+
+    - name: Changing Ownership
+      raw: chown -R root:websphere {{ was_home }}
+      tags: changeOwnership
+    
+    - name: start nodeagents
+      raw: su {{ pid }} {{ was_home }}/profiles/{{ item }}/bin/startNode.sh
+      ignore_errors: yes
+      with_items: " {{ output.stdout_lines }}"
+      when: '"Dmgr01" not in item '
+      tags: startNodes
+      notify: Pause after each tasks
+
+  handlers:
+    - name: Pause after each tasks
+      pause:
+        seconds: 30
+...
+
+
+
+
+      
+    
+
+    
+      
+      
