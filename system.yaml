@@ -1,17 +1,15 @@
 ---
 - name: Gather System info - Test yaml
   gather_facts: false
-  hosts: localhost
+  hosts: mysystem
   become: false
   tasks:
     - name: Gather system name
       raw: uname -a
       register: output
       
-    - name: Gather System diskss
+    - name: Gather System disks
       raw: df
       register: out
-      
-    - name: Display output
-      debug:
-        msg: output + " " + out
+      tags: disk
+
