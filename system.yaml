@@ -1,0 +1,17 @@
+---
+- name: Gather System info - Test yaml
+  gather_facts: false
+  hosts: localhost
+  become: false
+  tasks:
+    - name: Gather system name
+      raw: uname -a
+      register: output
+      
+    - name: Gather System diskss
+      raw: df
+      register: out
+      
+    - name: Display output
+      debug:
+        msg: output + " " + out
